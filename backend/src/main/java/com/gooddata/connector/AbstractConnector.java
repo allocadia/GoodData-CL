@@ -434,7 +434,7 @@ public abstract class AbstractConnector implements Connector {
         File tmpDir = FileUtil.createTempDir();
         File tmpZipDir = FileUtil.createTempDir();
         String archiveName = tmpDir.getName();
-        MDC.put("GdcDataPackageDir", archiveName);
+        MDC.put("GdcDataPackageDir", (Object)archiveName);
         String archivePath = tmpZipDir.getAbsolutePath() + System.getProperty("file.separator") +
                 archiveName + ".zip";
 
