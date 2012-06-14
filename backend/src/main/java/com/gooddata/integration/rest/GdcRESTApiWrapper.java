@@ -45,6 +45,7 @@ import org.apache.log4j.Logger;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -153,6 +154,26 @@ public class GdcRESTApiWrapper {
 
     }
 
+    /**
+    * GDC login - obtain GDC SSOToken
+    *
+    * @throws HttpMethodException
+    */
+    public void login(String token, String ssoProvider) throws HttpMethodException {
+    	l.debug("Logging into GoodData.");
+    	String uri = "/gdc/account/customerlogin?sessionId="+token+"&amp;serverURL="+ssoProvider+"&amp;targetURL=" + LOGIN_URI;
+    	HttpMethod ssoLogin = createGetMethod(getServerUrl() + uri);
+    	try {
+    		executeMethodOk(ssoLogin);
+    		l.debug("Successfully logged into GoodData.");
+    	}
+    	catch (Exception e) {
+    		System.err.println(getServerUrl() + uri);
+    	} finally {
+    		ssoLogin.releaseConnection();
+    	}
+    }
+    
     /**
      * Creates a new login JSON structure
      *

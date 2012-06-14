@@ -57,7 +57,7 @@ public class ProcessingContext {
 
     public void setProjectId(String projectId) {
         MDC.remove("GdcProjectId");
-        MDC.put("GdcProjectId", projectId);
+        MDC.put("GdcProjectId", (Object)projectId);
         this.projectId = projectId;
     }
 
