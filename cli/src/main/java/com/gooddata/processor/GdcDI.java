@@ -557,7 +557,15 @@ public class GdcDI implements Executor {
         try {
             if (cmd != null && cmd.length() > 0) {
                 Reader r = new StringReader(cmd);
-                DIScriptParser parser = new DIScriptParser(r);
+                
+                DIScriptParser parser = null;
+                try {
+                	parser = new DIScriptParser(r);
+                }
+                catch (Error err) {
+                	parser.ReInit(r);
+                }
+                
                 List<Command> commands = parser.parse();
                 l.debug("Running " + commands.size() + " commands.");
                 for (Command c : commands) {
