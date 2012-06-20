@@ -118,8 +118,11 @@ public class GdcDI implements Executor {
 
     private final static String BUILD_NUMBER = "";
 
+    public boolean finishedSucessfuly() {
+		return finishedSucessfuly;
+	}
 
-    public GdcDI(CommandLine ln, Properties defaults) {
+	public GdcDI(CommandLine ln, Properties defaults) {
         try {
             cliParams = parse(ln, defaults);
 
@@ -1469,7 +1472,7 @@ public class GdcDI implements Executor {
      *
      * @return default configuration
      */
-    private static Properties loadDefaults() {
+    public static Properties loadDefaults() {
         final String[] dirs = new String[]{"user.dir", "user.home"};
         final Properties props = new Properties();
         for (final String d : dirs) {
