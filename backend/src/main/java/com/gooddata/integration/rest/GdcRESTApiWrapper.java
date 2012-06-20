@@ -25,6 +25,7 @@ package com.gooddata.integration.rest;
 
 import com.gooddata.exception.*;
 import com.gooddata.integration.model.Column;
+import com.gooddata.integration.model.Dashboard;
 import com.gooddata.integration.model.Project;
 import com.gooddata.integration.model.SLI;
 import com.gooddata.integration.rest.configuration.NamePasswordConfiguration;
@@ -82,6 +83,7 @@ public class GdcRESTApiWrapper {
     public static final String PROJECT_PARTIAL_EXPORT_URI = "/maintenance/partialmdexport";
     public static final String PROJECT_PARTIAL_IMPORT_URI = "/maintenance/partialmdimport";
     public static final String REPORT_QUERY = "/query/reports";
+    public static final String DASHBOARD_QUERY = "/query/projectdashboards";
     public static final String ATTR_QUERY = "/query/attributes";
     public static final String EXECUTOR = "/gdc/xtab2/executor3";
     public static final String EXPORT_EXECUTOR = "/gdc/exporter/executor";
@@ -325,7 +327,30 @@ public class GdcRESTApiWrapper {
         l.debug("Found projects " + list);
         return list;
     }
-
+    
+    /**
+     * Returns the List of GoodDataProjectInfo structures for the accessible projects
+     *
+     * @return the List of GoodDataProjectInfo structures for the accessible projects
+     * @throws HttpMethodException
+     */
+    public List<Dashboard> listDashboards(String projectId) throws HttpMethodException {
+        l.debug("Listing dashboards.");
+        List<Dashboard> list = new ArrayList<Dashboard>();
+        for (String dashboardUri : enumerateDashboards(projectId)) {
+        	JSONObject dashboard = getAttribute(dashboardUri);
+        	JSONObject projectDashboard = dashboard.getJSONObject("projectDashboard");
+            JSONObject meta = projectDashboard.getJSONObject("meta");
+            if (meta.getInt("deprecated") != 0) {
+            	continue;
+            }
+            Dashboard d = new Dashboard(meta);
+            list.add(d);
+        }        
+        l.debug("Found dashboards " + list);
+        return list;
+    }
+    
     /**
      * Returns a list of project's SLIs
      *
@@ -773,6 +798,40 @@ public class GdcRESTApiWrapper {
             if (qry.isNullObject()) {
                 l.debug("Enumerating reports for project id=" + projectId + " failed.");
                 throw new GdcProjectAccessException("Enumerating reports for project id=" + projectId + " failed.");
+            }
+            JSONArray entries = qry.getJSONArray("entries");
+            if (entries == null) {
+                l.debug("Enumerating reports for project id=" + projectId + " failed.");
+                throw new GdcProjectAccessException("Enumerating reports for project id=" + projectId + " failed.");
+            }
+            for (Object oentry : entries) {
+                JSONObject entry = (JSONObject) oentry;
+                int deprecated = entry.getInt("deprecated");
+                if (deprecated == 0)
+                    list.add(entry.getString("link"));
+            }
+        } finally {
+            qGet.releaseConnection();
+        }
+        return list;
+    }
+    
+    public List<String> enumerateDashboards(String projectId) {
+        l.debug("Enumerating dashboards for project id=" + projectId);
+        List<String> list = new ArrayList<String>();
+        String qUri = getProjectMdUrl(projectId) + DASHBOARD_QUERY;
+        HttpMethod qGet = createGetMethod(qUri);
+        try {
+            String qr = executeMethodOk(qGet);
+            JSONObject q = JSONObject.fromObject(qr);
+            if (q.isNullObject()) {
+                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
+                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
+            }
+            JSONObject qry = q.getJSONObject("query");
+            if (qry.isNullObject()) {
+                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
+                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
             }
             JSONArray entries = qry.getJSONArray("entries");
             if (entries == null) {
@@ -2953,7 +3012,7 @@ public class GdcRESTApiWrapper {
         request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
         request.setRequestHeader("Accept", "application/json");
         request.setRequestHeader("Accept-Charset", "utf-u");
-        request.setRequestHeader("User-Agent", "GoodData CL/1.2.52");
+        request.setRequestHeader("User-Agent", "GoodData CL/1.2.54");
         return request;
     }
 

@@ -129,10 +129,15 @@ public class GdcDI implements Executor {
             if(cliParams.containsKey(CLI_PARAM_TIMEZONE[0])) {
                 String timezone = cliParams.get(CLI_PARAM_TIMEZONE[0]);
                 if(timezone != null && timezone.length()>0) {
-                    DateTimeZone.setDefault(DateTimeZone.forID("Europe/London"));
+                    try {
+                        DateTimeZone.setDefault(DateTimeZone.forID(timezone));
+                    }
+                    catch (IllegalArgumentException e) {
+                        throw new InvalidArgumentException("Invalid timezone: '" + timezone+"'.");
+                    }
                 }
                 else {
-                    throw new InvalidArgumentException("Invalid timezone: '" + timezone+"'.");
+                    DateTimeZone.setDefault(DateTimeZone.forID("UTC"));
                 }
             }
 
@@ -376,7 +381,7 @@ public class GdcDI implements Executor {
 
         if (cp.containsKey(CLI_PARAM_VERSION[0])) {
 
-            l.info("GoodData CL version 1.2.52" +
+            l.info("GoodData CL version 1.2.54" +
                     ((BUILD_NUMBER.length() > 0) ? ", build " + BUILD_NUMBER : "."));
             System.exit(0);
 
