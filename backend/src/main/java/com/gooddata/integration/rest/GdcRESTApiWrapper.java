@@ -1822,6 +1822,38 @@ public class GdcRESTApiWrapper {
         }
 
     }
+    
+    /**
+     * Returns the List of users email in the domain
+     *
+     * @return Returns the List of users email in the domain
+     * @throws HttpMethodException
+     */
+    @SuppressWarnings("unchecked")
+	public List<String> listUsers(String domain) throws HttpMethodException {
+        l.debug("Listing users in domain: " + domain);
+        List<String> list = new ArrayList<String>();
+        
+        HttpMethod req = createGetMethod(getServerUrl() + DOMAIN_URI + "/" + domain + DOMAIN_USERS_SUFFIX);
+        try {
+            String resp = executeMethodOk(req);
+            JSONObject parsedResp = JSONObject.fromObject(resp);
+            JSONObject settings = parsedResp.getJSONObject("accountSettings");
+            JSONArray items = settings.getJSONArray("items");        
+        
+	        for (Iterator<JSONObject> linksIter = items.iterator(); linksIter.hasNext(); ) {
+	            JSONObject item = linksIter.next();
+	            JSONObject setting = item.getJSONObject("accountSetting");
+	            String login = setting.getString("login");
+	            list.add(login);
+	        }
+	        
+	        l.debug("Found Users " + list);	        
+	        return list;
+        } finally {
+            req.releaseConnection();
+        }
+    }
 
     /**
      * Create a new user
