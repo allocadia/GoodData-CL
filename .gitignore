@@ -54,3 +54,4 @@ web/gooddata-cl-web.iml
 
 web-distro/target
 web-distro/gooddata-cl-web-distro.iml
+*.class
