@@ -352,6 +352,45 @@ public class GdcRESTApiWrapper {
     }
     
     /**
+     * Returns the name of the role user has in the project
+     * 
+     * @param projectId Good Data project id
+     * @return The name of the role user has in the project
+     * @throws HttpMethodException
+     */
+    public String getUserRole(String username, String projectId) throws HttpMethodException {
+    	l.debug("Getting user role.");
+    	
+    	String role = null;
+    	GdcUser user = null;
+    	List<GdcUser> projectUsers = getProjectUsers(projectId, true);
+    	for (GdcUser currentUser : projectUsers) {
+    		if (currentUser.getLogin() != null && currentUser.getLogin().equalsIgnoreCase(username)) {
+    			user = currentUser;
+    		}
+    	}
+    	
+    	if (user != null && user.getRoleLink() != null && user.getRoleLink().isEmpty() == false) {
+    		String qUri = getServerUrl() + user.getRoleLink();
+    		HttpMethod qGet = createGetMethod(qUri);
+    		
+    		try {		
+        		String response = executeMethodOk(qGet);
+        		JSONObject responseObject = JSONObject.fromObject(response);
+        		JSONObject projectRole = responseObject.getJSONObject("projectRole");
+        		JSONObject meta = projectRole.getJSONObject("meta");
+        		role = meta.getString("identifier");
+        	}
+        	finally {
+        		qGet.releaseConnection();
+        	}
+    	}
+        l.debug("Found user role.");
+    	
+    	return role;
+    }
+    
+    /**
      * Returns a list of project's SLIs
      *
      * @param projectId project's ID
@@ -1649,7 +1688,7 @@ public class GdcRESTApiWrapper {
         private String ssoProvider;
         private String status;
         private String uri;
-
+        private String roleLink;
 
         public GdcUser() {
         }
@@ -1696,6 +1735,11 @@ public class GdcRESTApiWrapper {
                 throw new GdcRestApiException("Can't extract user from JSON. No self key in the JSON.");
             }
             this.setUri(v);
+            JSONArray roleLinks = c.getJSONArray("userRoles");
+            if (roleLinks != null && roleLinks.size() > 0) {
+            	String userRoleLink = (String)roleLinks.get(0);
+            	this.setRoleLink(userRoleLink);
+            }
         }
 
         public boolean validate() {
@@ -1820,7 +1864,14 @@ public class GdcRESTApiWrapper {
         public void setSsoProvider(String ssoProvider) {
             this.ssoProvider = ssoProvider;
         }
+        
+        public String getRoleLink() {
+        	return this.roleLink;
+        }
 
+        public void setRoleLink(String roleLink) {
+        	this.roleLink = roleLink;
+        }
     }
     
     /**
