@@ -381,7 +381,7 @@ public class GdcDI implements Executor {
 
         if (cp.containsKey(CLI_PARAM_VERSION[0])) {
 
-            l.info("GoodData CL version 1.2.54" +
+            l.info("GoodData CL version 1.2.56" +
                     ((BUILD_NUMBER.length() > 0) ? ", build " + BUILD_NUMBER : "."));
             System.exit(0);
 
@@ -931,6 +931,7 @@ public class GdcDI implements Executor {
         user.setCountry(c.getParam("country"));
         user.setPhoneNumber(c.getParam("phone"));
         user.setSsoProvider(c.getParam("ssoProvider"));
+        user.setEmail(c.getParam("email"));
         String usersFile = c.getParam("usersFile");
         String appnd = c.getParam("append");
         c.paramsProcessed();
@@ -1228,6 +1229,7 @@ public class GdcDI implements Executor {
                             File sf = new File(schema);
                             if (sf.exists()) {
                                 SourceSchema srcSchema = SourceSchema.createSchema(sf);
+                                AbstractConnector.expandDates(srcSchema);
                                 String ssn = srcSchema.getName();
                                 List<Column> columns = AbstractConnector.populateColumnsFromSchema(srcSchema);
                                 SLI sli = ctx.getRestApi(p).getSLIById("dataset." + ssn, pid);
