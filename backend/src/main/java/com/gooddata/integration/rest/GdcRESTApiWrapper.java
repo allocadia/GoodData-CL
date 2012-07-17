@@ -64,7 +64,7 @@ public class GdcRESTApiWrapper {
     /**
      * GDC URIs
      */
-    private static final String MD_URI = "/gdc/md/";
+    protected static final String MD_URI = "/gdc/md/";
     private static final String LOGIN_URI = "/gdc/account/login";
     private static final String DOMAIN_URI = "/gdc/account/domains";
     private static final String DOMAIN_USERS_SUFFIX = "/users";
@@ -2338,7 +2338,7 @@ public class GdcRESTApiWrapper {
         return maqlStructure;
     }
 
-    private String executeMethodOk(HttpMethod method) throws HttpMethodException {
+    protected String executeMethodOk(HttpMethod method) throws HttpMethodException {
         return executeMethodOk(method, true);
     }
 
@@ -3079,15 +3079,15 @@ public class GdcRESTApiWrapper {
         }
     }
 
-    private static GetMethod createGetMethod(String path) {
+    protected static GetMethod createGetMethod(String path) {
         return configureHttpMethod(new GetMethod(path));
     }
 
-    private static PostMethod createPostMethod(String path) {
+    protected static PostMethod createPostMethod(String path) {
         return configureHttpMethod(new PostMethod(path));
     }
 
-    private static DeleteMethod createDeleteMethod(String path) {
+    protected static DeleteMethod createDeleteMethod(String path) {
         return configureHttpMethod(new DeleteMethod(path));
     }
 
