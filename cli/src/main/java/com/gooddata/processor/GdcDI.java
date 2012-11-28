@@ -80,6 +80,7 @@ public class GdcDI implements Executor {
     public static String[] CLI_PARAM_HTTP_PROXY_USERNAME = {"proxyusername", "U"};
     public static String[] CLI_PARAM_HTTP_PROXY_PASSWORD = {"proxypassword", "P"};
     public static String[] CLI_PARAM_TIMEZONE = {"timezone", "T"};
+    public static String[] CLI_PARAM_AUTHORIZATION_TOKEN = {"authtoken", "a"};
     public static String CLI_PARAM_SCRIPT = "script";
 
     private static String DEFAULT_PROPERTIES = "gdi.properties";
@@ -90,14 +91,15 @@ public class GdcDI implements Executor {
             new Option(CLI_PARAM_HELP[1], CLI_PARAM_HELP[0], false, "Print command reference"),
             new Option(CLI_PARAM_USERNAME[1], CLI_PARAM_USERNAME[0], true, "GoodData username"),
             new Option(CLI_PARAM_PASSWORD[1], CLI_PARAM_PASSWORD[0], true, "GoodData password"),
+            new Option(CLI_PARAM_AUTHORIZATION_TOKEN[1], CLI_PARAM_AUTHORIZATION_TOKEN[0], true, "GoodData project creation authorization token."),
             new Option(CLI_PARAM_HTTP_PROXY_HOST[1], CLI_PARAM_HTTP_PROXY_HOST[0], true, "HTTP proxy hostname."),
             new Option(CLI_PARAM_HTTP_PROXY_PORT[1], CLI_PARAM_HTTP_PROXY_PORT[0], true, "HTTP proxy port."),
             new Option(CLI_PARAM_HTTP_PORT[1], CLI_PARAM_HTTP_PORT[0], true, "HTTP port."),
-            new Option(CLI_PARAM_FTP_PORT[1], CLI_PARAM_FTP_PORT[0], true, "Data stage port"),
+            new Option(CLI_PARAM_FTP_PORT[1], CLI_PARAM_FTP_PORT[0], true, "Data stage port (deprecated)"),
             new Option(CLI_PARAM_HTTP_PROXY_USERNAME[1], CLI_PARAM_HTTP_PROXY_USERNAME[0], true, "HTTP proxy username."),
             new Option(CLI_PARAM_HTTP_PROXY_PASSWORD[1], CLI_PARAM_HTTP_PROXY_PASSWORD[0], true, "HTTP proxy password."),
             new Option(CLI_PARAM_HOST[1], CLI_PARAM_HOST[0], true, "GoodData host"),
-            new Option(CLI_PARAM_FTP_HOST[1], CLI_PARAM_FTP_HOST[0], true, "GoodData data stage host"),
+            new Option(CLI_PARAM_FTP_HOST[1], CLI_PARAM_FTP_HOST[0], true, "GoodData data stage host (deprecated)"),
             new Option(CLI_PARAM_PROJECT[1], CLI_PARAM_PROJECT[0], true, "GoodData project identifier (a string like nszfbgkr75otujmc4smtl6rf5pnmz9yl)"),
             new Option(CLI_PARAM_PROTO[1], CLI_PARAM_PROTO[0], true, "HTTP or HTTPS (deprecated)"),
             new Option(CLI_PARAM_INSECURE[1], CLI_PARAM_INSECURE[0], false, "Disable encryption"),
@@ -182,6 +184,7 @@ public class GdcDI implements Executor {
                         cliParams.get(CLI_PARAM_FTP_HOST[0]),
                         cliParams.get(CLI_PARAM_USERNAME[0]), cliParams.get(CLI_PARAM_PASSWORD[0])));
             }
+
             connectors = instantiateConnectors();
             String execute = cliParams.get(CLI_PARAM_EXECUTE[0]);
             String scripts = cliParams.get(CLI_PARAM_SCRIPT);
@@ -302,7 +305,12 @@ public class GdcDI implements Executor {
                         "portal (http://support.gooddata.com) may help you.\n\n" +
                         "Show them this error ID: " + requestId;
             }
-            l.error(msg);
+            if(msg.contains("503 Service Unavailable")) {
+                l.error("GoodData platform is undergoing maintenance. For information regarding this outage:\n" +
+                        "Support Portal\n" +
+                        "(415) 200-0194");
+            } else
+                l.error(msg);
             finishedSucessfuly = false;
         } catch (GdcRestApiException e) {
             l.error("REST API invocation error: " + e.getMessage());
@@ -381,7 +389,7 @@ public class GdcDI implements Executor {
 
         if (cp.containsKey(CLI_PARAM_VERSION[0])) {
 
-            l.info("GoodData CL version 1.2.56" +
+            l.info("GoodData CL version 1.2.64-SNAPSHOT" +
                     ((BUILD_NUMBER.length() > 0) ? ", build " + BUILD_NUMBER : "."));
             System.exit(0);
 
@@ -396,6 +404,7 @@ public class GdcDI implements Executor {
         l.debug("Using host " + cp.get(CLI_PARAM_HOST[0]));
 
         // create default FTP host if there is no host in the CLI params
+        /*
         if (!cp.containsKey(CLI_PARAM_FTP_HOST[0])) {
             String[] hcs = cp.get(CLI_PARAM_HOST[0]).split("\\.");
             if (hcs != null && hcs.length > 0) {
@@ -414,7 +423,9 @@ public class GdcDI implements Executor {
 
         }
 
+
         l.debug("Using FTP host " + cp.get(CLI_PARAM_FTP_HOST[0]));
+        */
 
         // Default to secure protocol if there is no host in the CLI params
         // Assume insecure protocol if user specifies "HTTPS", for backwards compatibility
@@ -1046,11 +1057,23 @@ public class GdcDI implements Executor {
             String desc = c.getParam("desc");
             String pTempUri = c.getParam("templateUri");
             String driver = c.getParam("driver");
+            String token = c.getParam("authorizationToken");
+            if(token == null || token.length() <= 0) { // backward compatibility
+                token = c.getParam("accessToken");
+                if(token == null || token.length() <= 0) { // take the token from the commandline (-a)
+                    token = p.get(CLI_PARAM_AUTHORIZATION_TOKEN[0]);
+                    if(token == null || token.length() <= 0) { // make the token mandatory
+                        throw new InvalidParameterException("The 'authorizationToken' parameter to the CreateProject " +
+                                "call is mandatory. Please specify it via the 'authorizationToken' parameter of the " +
+                                "CreateProject call or via the -a commandline parameter.");
+                    }
+                }
+            }
             c.paramsProcessed();
 
             if (desc == null || desc.length() <= 0)
                 desc = name;
-            ctx.setProjectId(ctx.getRestApi(p).createProject(StringUtil.toTitle(name), StringUtil.toTitle(desc), pTempUri, driver));
+            ctx.setProjectId(ctx.getRestApi(p).createProject(StringUtil.toTitle(name), StringUtil.toTitle(desc), pTempUri, driver, token));
             String pid = ctx.getProjectIdMandatory();
             checkProjectCreationStatus(pid, p, ctx);
             l.info("Project id = '" + pid + "' created.");
@@ -1381,12 +1404,11 @@ public class GdcDI implements Executor {
             String[] uris = result.split("\n");
             for (String uri : uris) {
                 try {
-                    String defUri = ctx.getRestApi(p).getReportDefinition(uri.trim());
-                    l.info("Executing report uri=" + defUri);
-                    String task = ctx.getRestApi(p).executeReportDefinition(defUri.trim());
-                    l.info("Report " + defUri + " execution finished: " + task);
+                    l.info("Executing report uri=" + uri);
+                    String task = ctx.getRestApi(p).executeReport(uri.trim());
+                    l.info("Report " + uri + " execution finished: " + task);
                 } catch (GdcRestApiException e) {
-                    l.debug("The report uri=" + uri + " can't be computed!");
+                    l.debug("The report uri=" + uri + " can't be computed!",e);
                     l.info("The report uri=" + uri + " can't be computed!");
                 }
             }

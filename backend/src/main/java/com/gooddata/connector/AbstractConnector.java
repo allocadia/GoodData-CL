@@ -71,6 +71,7 @@ public abstract class AbstractConnector implements Connector {
      */
     protected String projectId;
 
+    private Map<String, String> result = null;
 
     public static final int DATE_LENGTH_UNRESTRICTED = -1;
 
@@ -297,7 +298,7 @@ public abstract class AbstractConnector implements Connector {
         final File mf = FileUtil.getFile(maqlFile, ifExists);
         if (mf != null) {
             final String maql = FileUtil.readStringFromFile(maqlFile);
-            ctx.getRestApi(p).executeMAQL(pid, maql);
+            ctx.getRestApi(p).executeMAQLAsync(pid, maql);
         }
         l.debug("Finished MAQL execution.");
         l.info("MAQL script " + maqlFile + " successfully executed.");
@@ -520,7 +521,7 @@ public abstract class AbstractConnector implements Connector {
             l.info("Data successfully loaded.");
         } else if ("WARNING".equalsIgnoreCase(status)) {
             l.warn("Data loading succeeded with warnings. Status: " + status);
-            Map<String, String> result = ctx.getFtpApi(p).getTransferLogs(tmpDir);
+            result = ctx.getFtpApi(p).getTransferLogs(tmpDir);
             for (String file : result.keySet()) {
                 if (file.endsWith(".json"))
                     l.info(file + ":\n" + result.get(file));
@@ -566,6 +567,8 @@ public abstract class AbstractConnector implements Connector {
 
             final String pid = ctx.getProjectIdMandatory();
             final String maqlFile = c.getParamMandatory("maqlFile");
+            final String updateTitles = c.getParam("updateTitles");
+            final String updateDataTypes = c.getParam("updateDataTypes");
             c.paramsProcessed();
 
             final String dataset = schema.getDatasetName();
@@ -586,6 +589,12 @@ public abstract class AbstractConnector implements Connector {
             if (!newColumns.isEmpty()) {
                 mg.setSynchronize(false);
                 maql.append(mg.generateMaqlAdd(newColumns, diffMaker.getLocalColumns()));
+            }
+            if (updateTitles != null && !updateTitles.equalsIgnoreCase("false")) {
+            	maql.append(mg.generateMaqlUpdateTitles(diffMaker.getLocalColumns()));
+            }
+            if (updateDataTypes != null && !updateDataTypes.equalsIgnoreCase("false")) {
+            	maql.append(mg.generateMaqlUpdateDataTypes(diffMaker.getLocalColumns()));
             }
             if (maql.length() > 0) {
                 maql.append(mg.generateMaqlSynchronize());
@@ -634,5 +643,8 @@ public abstract class AbstractConnector implements Connector {
         private List<SourceColumn> newColumns = new ArrayList<SourceColumn>();
         private List<SourceColumn> deletedColumns = new ArrayList<SourceColumn>();
     }
-
+    
+    public Map<String, String> getResult() {
+        return result;
+    }
 }

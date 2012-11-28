@@ -1,11 +1,12 @@
-
 Project Management Commands:
 ----------------------------
 
-`CreateProject(name="...", desc="...", templateUri="...");` - create a new project on the server
+`CreateProject(name="...", desc="...", templateUri="...", driver=[Pg|mysql], authorizationToken="...");` - create a new project on the server
 - name        - name of the new project
+- authorizationToken - project creation authorization token (can be passed via the -a commandline parameter)
 - desc        - *(optional)* project description
 - templateUri - *(optional)* project template to create the project from
+- driver - *(optional)* underlying DB backend: `Pg`|`mysql`
 
 `DeleteProject(id="...");` - drop the project on the server
 - id - *(optional)* project id, if not specified, the command tries to drop the current project
@@ -22,7 +23,7 @@ Project Management Commands:
 `InviteUser(email="...", msg="...", role="...");` - invites a new user to the project (must call `CreateProject` or `OpenProject` before)
 - email - the invited user's e-mail
 - msg   - *(optional)* invitation message
-- role  - *(optional)* initial user's role: `admin`|`editor`|`dashboard only`
+- role  - *(optional)* initial user's role: admin|adminRole|editor|editorRole|dashboard only|dashboardOnlyRole|readonly|readonlyUserRole
 
 `CreateUser(domain="...", username="...", password="...", firstName="...", lastName="...", company="...", phone="...", country="...", position="...", ssoProvider="...", usersFile="...", append="...");` - creates a new user.
 - domain - the GoodData users domain. The domain needs to be created by GoodData admins and associated with your GoodData account
@@ -45,7 +46,7 @@ Project Management Commands:
 
 `AddUsersToProject(usersFile="...", role="...")` - adds users in the usersFile to the open project in a specific role
 - usersFile - the list of user URIs in a file
-- role  - (optional) initial user's role: admin|editor|dashboard only
+- role  - (optional) initial user's role: admin|adminRole|editor|editorRole|dashboard only|dashboardOnlyRole|readonly|readonlyUserRole
 
 `DisableUsersInProject(usersFile="...")` - disables users in the usersFile in the open project
 - usersFile - the list of user URIs in a file
