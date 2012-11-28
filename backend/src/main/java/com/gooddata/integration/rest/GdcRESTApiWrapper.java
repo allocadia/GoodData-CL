@@ -854,39 +854,39 @@ public class GdcRESTApiWrapper {
         return list;
     }
     
-    public List<String> enumerateDashboards(String projectId) {
-        l.debug("Enumerating dashboards for project id=" + projectId);
-        List<String> list = new ArrayList<String>();
-        String qUri = getProjectMdUrl(projectId) + DASHBOARD_QUERY;
-        HttpMethod qGet = createGetMethod(qUri);
-        try {
-            String qr = executeMethodOk(qGet);
-            JSONObject q = JSONObject.fromObject(qr);
-            if (q.isNullObject()) {
-                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
-                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
-            }
-            JSONObject qry = q.getJSONObject("query");
-            if (qry.isNullObject()) {
-                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
-                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
-            }
-            JSONArray entries = qry.getJSONArray("entries");
-            if (entries == null) {
-                l.debug("Enumerating reports for project id=" + projectId + " failed.");
-                throw new GdcProjectAccessException("Enumerating reports for project id=" + projectId + " failed.");
-            }
-            for (Object oentry : entries) {
-                JSONObject entry = (JSONObject) oentry;
-                int deprecated = entry.getInt("deprecated");
-                if (deprecated == 0)
-                    list.add(entry.getString("link"));
-            }
-        } finally {
-            qGet.releaseConnection();
-        }
-        return list;
-    }
+//    public List<String> enumerateDashboards(String projectId) {
+//        l.debug("Enumerating dashboards for project id=" + projectId);
+//        List<String> list = new ArrayList<String>();
+//        String qUri = getProjectMdUrl(projectId) + DASHBOARD_QUERY;
+//        HttpMethod qGet = createGetMethod(qUri);
+//        try {
+//            String qr = executeMethodOk(qGet);
+//            JSONObject q = JSONObject.fromObject(qr);
+//            if (q.isNullObject()) {
+//                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
+//                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
+//            }
+//            JSONObject qry = q.getJSONObject("query");
+//            if (qry.isNullObject()) {
+//                l.debug("Enumerating dashboards for project id=" + projectId + " failed.");
+//                throw new GdcProjectAccessException("Enumerating dashboards for project id=" + projectId + " failed.");
+//            }
+//            JSONArray entries = qry.getJSONArray("entries");
+//            if (entries == null) {
+//                l.debug("Enumerating reports for project id=" + projectId + " failed.");
+//                throw new GdcProjectAccessException("Enumerating reports for project id=" + projectId + " failed.");
+//            }
+//            for (Object oentry : entries) {
+//                JSONObject entry = (JSONObject) oentry;
+//                int deprecated = entry.getInt("deprecated");
+//                if (deprecated == 0)
+//                    list.add(entry.getString("link"));
+//            }
+//        } finally {
+//            qGet.releaseConnection();
+//        }
+//        return list;
+//    }
 
     private String getProjectIdFromObjectUri(String uri) {
         Pattern regexp = Pattern.compile("gdc/md/.*?/");
