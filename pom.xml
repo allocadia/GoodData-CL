@@ -461,12 +461,20 @@
 
     <distributionManagement>
         <repository>
-            <id>gooddata</id>
-            <url>https://maven.gooddata.com/nexus/content/repositories/gooddata/</url>
+<!--
+			<id>gooddata</id>
+			<url>https://maven.gooddata.com/nexus/content/repositories/gooddata/</url>
+-->
+            <id>releases</id>
+			<url>http://localhost:8081/nexus/content/repositories/releases/</url>
         </repository>
         <snapshotRepository>
-            <id>gooddata-snapshots</id>
-            <url>https://maven.gooddata.com/nexus/content/repositories/gooddata-snapshots/</url>
+<!--	
+			<id>gooddata-snapshots</id>
+			<url>https://maven.gooddata.com/nexus/content/repositories/gooddata-snapshots/</url>
+-->	
+            <id>allocadia-snapshots</id>
+			<url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
