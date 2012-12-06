@@ -471,8 +471,8 @@
 			<id>gooddata-snapshots</id>
 			<url>https://maven.gooddata.com/nexus/content/repositories/gooddata-snapshots/</url>
 -->	
-            <id>allocadia-snapshots</id>
-			<url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
+            <id>thirdparty-snapshots</id>
+			<url>http://localhost:8081/nexus/content/repositories/thirdparty-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
