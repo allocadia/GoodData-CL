@@ -23,6 +23,7 @@
 
 package com.gooddata.integration.rest;
 
+import com.gooddata.Constants;
 import com.gooddata.exception.*;
 import com.gooddata.integration.model.Column;
 import com.gooddata.integration.model.Dashboard;
@@ -39,6 +40,7 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.InputStreamRequestEntity;
@@ -947,7 +949,7 @@ public class GdcRESTApiWrapper {
         obj.put("reportDefinition", reportDefinition);
         MetadataObject resp = new MetadataObject(createMetadataObject(projectId, obj));
 
-        int retryCnt = 1000;
+        int retryCnt = Constants.MAX_RETRY;
         boolean hasFinished = false;
         while (retryCnt-- > 0 && !hasFinished) {
             try {
@@ -975,7 +977,7 @@ public class GdcRESTApiWrapper {
             } catch (HttpMethodNotFinishedYetException e) {
                 l.debug("computeMetric: Waiting for DataResult");
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 } catch (InterruptedException ex) {
                     // do nothing
                 }
@@ -994,11 +996,11 @@ public class GdcRESTApiWrapper {
     public String computeReport(String reportUri) {
         l.debug("Computing report uri=" + reportUri);
         String retVal = "";
-        int retryCnt = 1000;
+        int retryCnt = Constants.MAX_RETRY;
         boolean hasFinished = false;
         while (retryCnt-- > 0 && !hasFinished) {
             try {
-                String dataResultUri = executeReport(reportUri);
+                String dataResultUri = executeReport(reportUri).getJSONObject("execResult").getString("dataResult");
                 JSONObject result = getObjectByUri(dataResultUri);
                 hasFinished = true;
                 if (result != null && !result.isEmpty() && !result.isNullObject()) {
@@ -1092,7 +1094,7 @@ public class GdcRESTApiWrapper {
             } catch (HttpMethodNotFinishedYetException e) {
                 l.debug("computeReport: Waiting for DataResult");
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 } catch (InterruptedException ex) {
                     // do nothing
                 }
@@ -1153,11 +1155,12 @@ public class GdcRESTApiWrapper {
     }
 
     /**
-     * Report to execute
+     * Report to execute.
      *
+     * @return JSON representation of the report result (the "execResult" object including the "execResult" root key)
      * @param reportUri report definition to execute
      */
-    public String executeReport(String reportUri) {
+    public JSONObject executeReport(String reportUri) {
         l.debug("Executing report uri=" + reportUri);
         PostMethod execPost = createPostMethod(getServerUrl() + EXECUTOR);
         JSONObject execDef = new JSONObject();
@@ -1188,7 +1191,7 @@ public class GdcRESTApiWrapper {
                     throw new GdcRestApiException("Executing report uri=" + reportUri + " failed. " +
                             "Returned invalid dataResult=" + tr);
                 }
-                return dataResult;
+                return tr;
             } else {
                 l.debug("Executing report uri=" + reportUri + " failed. Returned invalid task link uri=" + task);
                 throw new GdcRestApiException("Executing report uri=" + reportUri +
@@ -1205,14 +1208,15 @@ public class GdcRESTApiWrapper {
     /**
      * Export a report result
      *
-     * @param resultUri report result to export
+     * @param execResult object returned by the {@link #executeReport(String)} method
      * @param format    export format (pdf | xls | png | csv)
      */
-    public byte[] exportReportResult(String resultUri, String format) {
+    public byte[] exportReportResult(JSONObject execResult, String format) {
+    	String resultUri = execResult.getJSONObject("execResult").getString("dataResult");
         l.debug("Exporting report result uri=" + resultUri);
         PostMethod execPost = createPostMethod(getServerUrl() + EXPORT_EXECUTOR);
         JSONObject execDef = new JSONObject();
-        execDef.put("report", resultUri);
+        execDef.put("result", execResult);
         execDef.put("format", format);
         JSONObject exec = new JSONObject();
         exec.put("result_req", execDef);
@@ -1269,7 +1273,7 @@ public class GdcRESTApiWrapper {
             } catch (HttpMethodNotFinishedYetException e) {
                 l.debug("Waiting for exporter to finish.");
                 try {
-                    Thread.currentThread().sleep(1000);
+                    Thread.currentThread().sleep(Constants.POLL_INTERVAL);
                 } catch (InterruptedException ex) {
                     // do nothing
                 }
@@ -1542,15 +1546,23 @@ public class GdcRESTApiWrapper {
             }
             if(taskmanUri != null && taskmanUri.length()>0) {
                 l.debug("Checking async MAQL DDL execution status.");
-                String status = "";
-                while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
-                    status = getTaskManStatus(taskmanUri);
-                    l.debug("Async MAQL DDL status = " + status);
-                    Thread.sleep(500);
+                TaskmanStatus status = new TaskmanStatus("",new String[]{});
+                while (!"OK".equalsIgnoreCase(status.getStatus()) && !"ERROR".equalsIgnoreCase(status.getStatus()) &&
+                        !"WARNING".equalsIgnoreCase(status.getStatus())) {
+                    status = getDetailedTaskManStatus(taskmanUri);
+                    l.debug("Async MAQL DDL status = " + status.getStatus());
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 }
-                l.info("Async MAQL DDL finished with status " + status);
-                if (!("OK".equalsIgnoreCase(status) || !"WARNING".equalsIgnoreCase(status))) {
-                    throw new GdcRestApiException("Async MAQL execution failed with status "+status);
+                l.info("Async MAQL DDL finished with status " + status.getStatus());
+                if (!("OK".equalsIgnoreCase(status.getStatus()) || "WARNING".equalsIgnoreCase(status.getStatus()))) {
+                    String[] messages = status.getMessage();
+                    String message = "";
+                    for(String msg : messages) {
+                        if(message.length()>0) message += "\n";
+                        message += msg;
+                    }
+                    throw new GdcRestApiException("Async MAQL execution failed with status "+status.getStatus() +
+                            ". Errors: "+message);
                 }
             }
         } catch (HttpMethodException ex) {
@@ -2617,7 +2629,7 @@ public class GdcRESTApiWrapper {
                 l.debug("Remote asked us to retry after " + timeout + " seconds, sleeping.");
                 l.debug(retries + " more retries");
                 try {
-                    Thread.currentThread().sleep(1000 * timeout);
+                    Thread.currentThread().sleep(Constants.RETRY_INTERVAL * timeout);
                 } catch (java.lang.InterruptedException e) {
                 }
                 executeMethodOkOnly(method, false, retries);
@@ -3157,7 +3169,7 @@ public class GdcRESTApiWrapper {
                 } catch (HttpMethodNotFinishedYetException e) {
                     l.debug("getTaskManStatus: Waiting for status");
                     try {
-                        Thread.sleep(500);
+                        Thread.sleep(Constants.POLL_INTERVAL);
                     } catch (InterruptedException ex) {
                         // do nothing
                     }
@@ -3170,8 +3182,90 @@ public class GdcRESTApiWrapper {
                 l.debug("TaskMan status=" + status);
                 return status;
             } else {
-                l.debug("No wTaskStatus structure in the migration status!");
-                throw new GdcRestApiException("No wTaskStatus structure in the migration status!");
+                l.debug("No wTaskStatus structure in the taskman status!");
+                throw new GdcRestApiException("No wTaskStatus structure in the taskman status!");
+            }
+        } finally {
+            ptm.releaseConnection();
+        }
+    }
+
+    public static class TaskmanStatus {
+
+        private String[] message;
+        private String status;
+
+        public TaskmanStatus(String s, String[] m) {
+            this.status = s;
+            this.message = m;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public String[] getMessage() {
+            return message;
+        }
+
+        public void setMessage(String[] message) {
+            this.message = message;
+        }
+
+    }
+
+    public TaskmanStatus getDetailedTaskManStatus(String link) throws HttpMethodException {
+        l.debug("Getting TaskMan status uri=" + link);
+        HttpMethod ptm = createGetMethod(getServerUrl() + link);
+        try {
+            String response = "";
+            boolean isFinished = false;
+            while (!isFinished) {
+                try {
+                    response = executeMethodOk(ptm);
+                    isFinished = true;
+                } catch (HttpMethodNotFinishedYetException e) {
+                    l.debug("getTaskManStatus: Waiting for status");
+                    try {
+                        Thread.sleep(Constants.POLL_INTERVAL);
+                    } catch (InterruptedException ex) {
+                        // do nothing
+                    }
+                }
+            }
+            JSONObject task = JSONObject.fromObject(response);
+            JSONObject state = task.getJSONObject("wTaskStatus");
+            if (state != null && !state.isNullObject() && !state.isEmpty()) {
+                String status = state.getString("status");
+                ArrayList<String> messages = new ArrayList<String>();
+                l.debug("TaskMan status=" + status);
+                if(state.containsKey("messages")) {
+                    JSONArray msgs = state.getJSONArray("messages");
+                    if(msgs != null && !msgs.isEmpty()) {
+                        for (Object msgo : msgs) {
+                            JSONObject msg = (JSONObject)msgo;
+                            String root = (String)msg.keys().next();
+                            JSONObject inner = msg.getJSONObject(root);
+                            JSONArray prms = inner.getJSONArray("parameters");
+                            String message = inner.getString("message");
+                            if(prms != null && !prms.isEmpty()) {
+                                for(Object prmo : prms) {
+                                    String prm = (String)prmo;
+                                    message = message.replaceFirst("\\%s",prm);
+                                }
+                            }
+                            messages.add(message);
+                        }
+                    }
+                }
+                return new TaskmanStatus(status, (String[])messages.toArray(new String[]{}));
+            } else {
+                l.debug("No wTaskStatus structure in the taskman status!");
+                throw new GdcRestApiException("No wTaskStatus structure in the taskman status!");
             }
         } finally {
             ptm.releaseConnection();
@@ -3227,7 +3321,8 @@ public class GdcRESTApiWrapper {
         request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
         request.setRequestHeader("Accept", "application/json");
         request.setRequestHeader("Accept-Charset", "utf-u");
-        request.setRequestHeader("User-Agent", "GoodData CL/1.2.65");
+        request.setRequestHeader("User-Agent", "GoodData CL/1.2.68");
+        request.getParams().setCookiePolicy(CookiePolicy.BROWSER_COMPATIBILITY);
         return request;
     }
 

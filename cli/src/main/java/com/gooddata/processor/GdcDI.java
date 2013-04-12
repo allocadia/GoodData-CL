@@ -23,6 +23,7 @@
 
 package com.gooddata.processor;
 
+import com.gooddata.Constants;
 import com.gooddata.connector.*;
 import com.gooddata.exception.*;
 import com.gooddata.integration.model.Column;
@@ -389,7 +390,7 @@ public class GdcDI implements Executor {
 
         if (cp.containsKey(CLI_PARAM_VERSION[0])) {
 
-            l.info("GoodData CL version 1.2.65" +
+            l.info("GoodData CL version 1.2.68" +
                     ((BUILD_NUMBER.length() > 0) ? ", build " + BUILD_NUMBER : "."));
             System.exit(0);
 
@@ -690,7 +691,7 @@ public class GdcDI implements Executor {
                 while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                     status = ctx.getRestApi(p).getMigrationStatus(taskUri);
                     l.debug("MAQL DML execution status = " + status);
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 }
                 l.info("MAQL DML execution finished with status " + status);
                 if ("ERROR".equalsIgnoreCase(status)) {
@@ -743,7 +744,7 @@ public class GdcDI implements Executor {
                 while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                     status = ctx.getRestApi(p).getMigrationStatus(taskUri);
                     l.debug("Project export status = " + status);
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 }
                 l.info("Project export finished with status " + status);
                 if ("OK".equalsIgnoreCase(status) || "WARNING".equalsIgnoreCase(status)) {
@@ -786,7 +787,7 @@ public class GdcDI implements Executor {
                 while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                     status = ctx.getRestApi(p).getMigrationStatus(taskUri);
                     l.debug("Project import status = " + status);
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 }
                 l.info("Project import finished with status " + status);
                 if ("ERROR".equalsIgnoreCase(status)) {
@@ -843,7 +844,7 @@ public class GdcDI implements Executor {
                     while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                         status = ctx.getRestApi(p).getTaskManStatus(taskUri);
                         l.debug("MD export status = " + status);
-                        Thread.sleep(500);
+                        Thread.sleep(Constants.POLL_INTERVAL);
                     }
                     l.info("MD export finished with status " + status);
                     if ("OK".equalsIgnoreCase(status) || "WARNING".equalsIgnoreCase(status)) {
@@ -898,7 +899,7 @@ public class GdcDI implements Executor {
                 while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                     status = ctx.getRestApi(p).getTaskManStatus(taskUri);
                     l.debug("MD import status = " + status);
-                    Thread.sleep(500);
+                    Thread.sleep(Constants.POLL_INTERVAL);
                 }
                 l.info("MD import finished with status " + status);
                 if ("ERROR".equalsIgnoreCase(status)) {
@@ -1133,7 +1134,7 @@ public class GdcDI implements Executor {
         while ("LOADING".equalsIgnoreCase(status)) {
             status = ctx.getRestApi(p).getProjectStatus(projectId);
             l.debug("Project " + projectId + " loading  status = " + status);
-            Thread.sleep(500);
+            Thread.sleep(Constants.POLL_INTERVAL);
         }
     }
 
@@ -1216,7 +1217,7 @@ public class GdcDI implements Executor {
                     while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
                         status = ctx.getRestApi(p).getMigrationStatus(taskUri);
                         l.debug("Migration status = " + status);
-                        Thread.sleep(500);
+                        Thread.sleep(Constants.POLL_INTERVAL);
                     }
                     l.info("Migration finished with status " + status);
                 } else {
@@ -1410,7 +1411,7 @@ public class GdcDI implements Executor {
             for (String uri : uris) {
                 try {
                     l.info("Executing report uri=" + uri);
-                    String task = ctx.getRestApi(p).executeReport(uri.trim());
+                    String task = ctx.getRestApi(p).executeReport(uri.trim()).getJSONObject("execResult").getString("dataResult");
                     l.info("Report " + uri + " execution finished: " + task);
                 } catch (GdcRestApiException e) {
                     l.debug("The report uri=" + uri + " can't be computed!",e);
