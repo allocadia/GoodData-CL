@@ -36,7 +36,6 @@ import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -268,7 +267,7 @@ public class CreateZendeskV3Projects {
         CliParams cp = new CliParams();
 
         if (cp.containsKey(CLI_PARAM_VERSION[0])) {
-            l.info("GoodData CL version 1.2.69");
+            l.info("GoodData CL version 1.3.0");
             System.exit(0);
         }
 
@@ -348,7 +347,7 @@ public class CreateZendeskV3Projects {
     }
 
     /**
-     * Checks the project status. Waits till the status is LOADING
+     * Checks the project status. Waits till the status is ENABLED or DELETED
      *
      * @param projectId project ID
      * @param p         cli parameters
@@ -357,12 +356,12 @@ public class CreateZendeskV3Projects {
      */
     private void checkProjectCreationStatus(String projectId, CliParams p, ProcessingContext ctx) throws InterruptedException {
         l.debug("Checking project " + projectId + " loading status.");
-        String status = "LOADING";
-        while ("LOADING".equalsIgnoreCase(status)) {
+        String status = null;
+        do {
             status = ctx.getRestApi(p).getProjectStatus(projectId);
             l.debug("Project " + projectId + " loading  status = " + status);
             Thread.sleep(Constants.POLL_INTERVAL);
-        }
+        } while (!("DELETED".equalsIgnoreCase(status) || "ENABLED".equalsIgnoreCase(status)));
     }
 
 }

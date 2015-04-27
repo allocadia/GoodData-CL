@@ -30,7 +30,6 @@ import com.gooddata.integration.model.Dashboard;
 import com.gooddata.integration.model.Project;
 import com.gooddata.integration.model.SLI;
 import com.gooddata.integration.rest.configuration.NamePasswordConfiguration;
-import com.gooddata.util.FileUtil;
 import com.gooddata.util.NetUtil;
 
 import net.sf.json.JSON;
@@ -83,7 +82,6 @@ public class GdcRESTApiWrapper {
     private static final String PULL_URI = "/etl/pull";
     private static final String IDENTIFIER_URI = "/identifiers";
     private static final String SLI_DESCRIPTOR_URI = "/descriptor";
-    public static final String MAQL_EXEC_URI = "/ldm/manage";
     public static final String MAQL_ASYNC_EXEC_URI = "/ldm/manage2";
     public static final String DML_EXEC_URI = "/dml/manage";
     public static final String PROJECT_EXPORT_URI = "/maintenance/export";
@@ -105,7 +103,7 @@ public class GdcRESTApiWrapper {
     public static final String LINKS_UPLOADS_KEY = "uploads";
 
     public static final String DLI_MANIFEST_FILENAME = "upload_info.json";
-    
+
     public static final String QUERY_PROJECTDASHBOARDS = "projectdashboards";
     public static final String QUERY_FOLDERS = "folders";
     public static final String QUERY_DATASETS = "datasets";
@@ -1485,35 +1483,6 @@ public class GdcRESTApiWrapper {
         }
         l.debug("Can't get project from " + uri);
         throw new GdcRestApiException("Can't get project from " + uri);
-    }
-
-    /**
-     * Executes the MAQL and creates/modifies the project's LDM
-     *
-     * @param projectId the project's ID
-     * @param maql      String with the MAQL statements
-     * @return result String
-     * @throws GdcRestApiException
-     */
-    public String[] executeMAQL(String projectId, String maql) throws GdcRestApiException {
-        l.debug("Executing MAQL projectId=" + projectId + " MAQL:\n" + maql);
-        PostMethod maqlPost = createPostMethod(getProjectMdUrl(projectId) + MAQL_EXEC_URI);
-        JSONObject maqlStructure = getMAQLExecStructure(maql);
-        InputStreamRequestEntity request = new InputStreamRequestEntity(new ByteArrayInputStream(
-                maqlStructure.toString().getBytes()));
-        maqlPost.setRequestEntity(request);
-        String result = null;
-        try {
-            String response = executeMethodOk(maqlPost);
-            JSONObject responseObject = JSONObject.fromObject(response);
-            JSONArray uris = responseObject.getJSONArray("uris");
-            return (String[]) uris.toArray(new String[]{""});
-        } catch (HttpMethodException ex) {
-            l.debug("MAQL execution: ", ex);
-            throw new GdcRestApiException("MAQL execution: " + ex.getMessage(), ex);
-        } finally {
-            maqlPost.releaseConnection();
-        }
     }
 
     /**
@@ -3321,7 +3290,7 @@ public class GdcRESTApiWrapper {
         request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
         request.setRequestHeader("Accept", "application/json");
         request.setRequestHeader("Accept-Charset", "utf-u");
-        request.setRequestHeader("User-Agent", "GoodData CL/1.2.69");
+        request.setRequestHeader("User-Agent", "GoodData CL/1.3.0");
         request.getParams().setCookiePolicy(CookiePolicy.BROWSER_COMPATIBILITY);
         return request;
     }
@@ -3333,10 +3302,10 @@ public class GdcRESTApiWrapper {
             super.finalize();
         }
     }
-    
+
     /**
      * API for querying users in a domain
-     * 
+     *
      * @param domain
      * @return
      */
@@ -3495,7 +3464,7 @@ public class GdcRESTApiWrapper {
     /**
      * Checks if report copying is finished. Workaround implementation due to
      * wrong handling of status code.
-     * 
+     *
      * @param link
      *            the link returned from the start loading
      * @return the loading status
@@ -3533,11 +3502,11 @@ public class GdcRESTApiWrapper {
 	    ptm.releaseConnection();
 	}
     }
-    
+
 
     /**
      * Retrieves the project info by the project's name
-     * 
+     *
      * @param name
      *            the project name
      * @return the GoodDataProjectInfo populated with the project's information
@@ -3569,7 +3538,7 @@ public class GdcRESTApiWrapper {
 
     /**
      * Returns the existing projects links
-     * 
+     *
      * @return accessible projects links
      * @throws com.gooddata.exception.HttpMethodException
      */
@@ -3592,7 +3561,7 @@ public class GdcRESTApiWrapper {
 
     /**
      * Create a new GoodData project
-     * 
+     *
      * @param name
      *            project name
      * @param desc
@@ -3607,11 +3576,11 @@ public class GdcRESTApiWrapper {
 	    throws GdcRestApiException {
 	    return this.createProject(name, desc, templateUri, null, null);
     }
-    
+
     /**
      * Returns the List of GoodDataProjectInfo structures for the accessible
      * projects
-     * 
+     *
      * @return the List of GoodDataProjectInfo structures for the accessible
      *         projects
      * @throws HttpMethodException
