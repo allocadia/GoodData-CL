@@ -506,8 +506,14 @@ public abstract class AbstractConnector implements Connector {
         l.debug("Checking data transfer status.");
         String status = "";
         int retryCount = 0;
+        long startTime = System.currentTimeMillis();
         while (!"OK".equalsIgnoreCase(status) && !"ERROR".equalsIgnoreCase(status) && !"WARNING".equalsIgnoreCase(status)) {
             try {
+                long elapsedTime = (System.currentTimeMillis() - startTime);
+                if (elapsedTime > Constants.LOADING_STATUS_RETRY_TIMEOUT) {
+                    throw new GdcIntegrationErrorException("Loading status check exceeded the timeout threshold (" + Constants.LOADING_STATUS_RETRY_TIMEOUT + ")");
+                }
+
                 status = ctx.getRestApi(p).getLoadingStatus(taskUri);
                 l.debug("Loading status = " + status);
                 Thread.sleep(Constants.POLL_INTERVAL);

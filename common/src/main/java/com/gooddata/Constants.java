@@ -56,5 +56,6 @@ public class Constants {
     // polling interval
     public final static int POLL_INTERVAL = 10000;
     public final static int RETRY_INTERVAL = 1000;
+    public final static long LOADING_STATUS_RETRY_TIMEOUT = 3600000;
 
 }
